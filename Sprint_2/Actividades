@@ -1,0 +1,15 @@
+Actividades Para realizar en la semana 2 (Por Diego Huerta Rodriguez)
+Historias Seleccionadas para Sprint 2:
+-HU-02 (13 pts): Como usuario, quiero poder enviar y recibir mensajes de texto a un contacto seleccionado para comunicarme.
+1. Diseñar protocolo de comunicación Bluetooth para mensajes (Hernández Aparicio Ángel)	
+2. Empezar desarrollo del servicio de envío y recepción de mensajes vía Bluetooth	(Alba García Pedro	)
+3. Empezar desarrollo del servicio de envío y recepción de mensajes vía Wifi-direct	(Parra García Osiris)
+4. Diseñar pantalla de chat con entrada de texto y botón enviar	(Huerta Rodriguez Diego)
+5. Comenzar el desarrollo de la lista de mensajes en tiempo real	(Bello Zuñiga Juan Manuel)
+6. Continuar el desarrollo detección de dispositivos con pantalla de chat	(Cázares Betanzos Joaquín)
+
+-HU-03 (5 pts): Como usuario, quiero que todos mis mensajes se guarden localmente en mi dispositivo para poder leer mis conversaciones aunque reinicie la app.
+1. Diseñar esquema de base de datos (Hernández Aparicio Ángel	)
+2. Implementar DAO (Data Access Object) para mensajes y conversaciones	(Alba García Pedro)
+3. Plantear persistencia en pantalla de chat	(Bello Zuñiga Juan Manuel)
+4. Empezar a implementar la carga de chats al abrir la app	(Parra García Osiris)
