@@ -25,7 +25,7 @@ Este Composable contiene la mayor parte de la lógica de estado y control de Blu
 
 El **`LaunchedEffect`** garantiza la solicitud correcta de permisos al cargar la pantalla, diferenciando los requerimientos de **Android 12 (API 31, versión S)** y anteriores para obtener acceso al escaneo y la conexión.
 
-```kotlin
+
 // Solicitar permisos al iniciar
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -54,7 +54,7 @@ Se utiliza un **`BroadcastReceiver`** registrado dentro de un **`DisposableEffec
 
 Es crucial notar el **filtro** que solo añade a la lista aquellos dispositivos cuya clase de Bluetooth coincida con un **teléfono inteligente** (`BluetoothClass.Device.PHONE_...`), asegurando que solo se muestren los dispositivos relevantes para la comunicación *Peer-to-Peer*.
 
-```kotlin
+
 // Escucha de dispositivos detectados
     DisposableEffect(key1 = bluetoothAdapter) {
         val receiver = object : BroadcastReceiver() {
@@ -87,7 +87,7 @@ Es crucial notar el **filtro** que solo añade a la lista aquellos dispositivos 
 
 Este botón es el punto de control para iniciar el escaneo. Comprueba si el **Bluetooth está encendido** y, si no lo está, lanza la `Intent` para solicitar su activación. Si ya está encendido y los permisos están dados, limpia la lista de resultados anteriores e inicia el descubrimiento.
 
-```kotlin
+
         Button(onClick = {
             // ... (Verificación de soporte Bluetooth)
 
@@ -119,7 +119,7 @@ La **`LazyColumn`** presenta los resultados del escaneo. La acción **`clickable
 2.  Si no hay conexión activa, inicia una **corrutina** (`scope.launch`) para simular el proceso de sincronización con un mensaje de estado dinámico y un tiempo de espera de 2 segundos.
 3.  Determina el éxito o fracaso de la conexión con una condición booleana simulada (`Math.random() > 0.5`).
 
-```kotlin
+
 // 📋 Lista de teléfonos encontrados
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(discoveredDevices) { device ->
@@ -164,7 +164,7 @@ Estos botones proporcionan la funcionalidad para detener el escaneo y para simul
 | **DETENER ESCANEO** | Detiene la búsqueda activa (`cancelDiscovery()`) y limpia los estados de escaneo y conexión. |
 | **DESCONECTAR** | Simula la desconexión del dispositivo activo, limpiando la variable `connectedDevice`. |
 
-```kotlin
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
