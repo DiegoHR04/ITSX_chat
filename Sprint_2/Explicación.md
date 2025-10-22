@@ -334,5 +334,129 @@ Este código demuestra una implementación práctica de **escaneo y conexión Bl
 👨‍💻 *Desarrollado por SirBlaster — Proyecto Sprint 2 (ITSX_Chat)*
 📆 *2025*
 
+
+
+
+## 🚀 Propuesta a Futuro: Sincronización Avanzada (BLE + Wi-Fi Direct)
+
+Para una solución robusta de transferencia de archivos **Peer-to-Peer** (P2P), la siguiente evolución consiste en un flujo híbrido que utiliza **Bluetooth Low Energy (BLE)** para el descubrimiento de corto alcance y **Wi-Fi Direct** para la conexión de alta velocidad.
+
+### Flujo de Implementación Propuesto
+
+El proceso opera en cuatro etapas:
+
+1.  **Descubrimiento (BLE Advertising):** La aplicación se anuncia usando un **Service UUID** propio para identificarse.
+2.  **Escaneo (BLE Scanning):** La aplicación escanea, filtrando únicamente por el Service UUID conocido, extrayendo un **token/nonce** (datos del fabricante).
+3.  **Negociación (Opcional):** Se realiza un *handshake* rápido para confirmar la intención de conexión.
+4.  **Conexión de Alta Velocidad (Wi-Fi Direct):** Uno de los dispositivos crea un grupo (Group Owner - GO). Se obtiene la IP del GO y se abre un **socket TCP** para la transferencia de datos.
+
+### 1\) BLE Advertising (Anunciarse)
+
+```kotlin
+// Dependencias: android.bluetooth.le
+import android.bluetooth.le.AdvertiseCallback
+import android.bluetooth.le.AdvertiseData
+import android.bluetooth.le.AdvertiseSettings
+import android.bluetooth.le.BluetoothLeAdvertiser
+import android.os.ParcelUuid
+import java.util.UUID
+
+fun startBleAdvertise(adapter: BluetoothAdapter, appUuid: UUID, tokenBytes: ByteArray) {
+    val advertiser: BluetoothLeAdvertiser? = adapter.bluetoothLeAdvertiser
+    if (advertiser == null) {
+        // no support
+        return
+    }
+
+    val settings = AdvertiseSettings.Builder()
+        .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+        .setConnectable(false) // solo discovery; para handshake usar GATT o sockets
+        .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
+        .build()
+
+    val dataBuilder = AdvertiseData.Builder()
+        // Publicar el service UUID (identifica apps Mesh Chat)
+        .addServiceUuid(ParcelUuid(appUuid))
+        // Manufacturer data es ideal para tokens cortos (1-4 bytes)
+        .addManufacturerData(0xFFFF, tokenBytes) 
+        .setIncludeDeviceName(false)
+
+    val advertiseCallback = object : AdvertiseCallback() {
+        override fun onStartSuccess(settingsInEffect: AdvertiseSettings) { /* ok */ }
+        override fun onStartFailure(errorCode: Int) { /* manejar error */ }
+    }
+
+    advertiser.startAdvertising(settings, dataBuilder.build(), advertiseCallback)
+}
+```
+
+### 2\) BLE Scanning (Filtrar por Service UUID)
+
+```kotlin
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
+import android.bluetooth.le.ScanSettings
+import android.bluetooth.le.ScanResult
+import android.os.ParcelUuid
+// ...
+
+fun startBleScan(adapter: BluetoothAdapter, appUuid: UUID, onFound: (ScanResult)->Unit) {
+    val scanner = adapter.bluetoothLeScanner ?: return
+
+    val filter = ScanFilter.Builder()
+        .setServiceUuid(ParcelUuid(appUuid)) // Solo escanear por nuestro Service UUID
+        .build()
+
+    val settings = ScanSettings.Builder()
+        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+        .build()
+
+    val scanCallback = object : ScanCallback() {
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            onFound(result)
+        }
+        override fun onBatchScanResults(results: MutableList<ScanResult>) {
+            results.forEach { onFound(it) }
+        }
+    }
+
+    scanner.startScan(listOf(filter), settings, scanCallback)
+
+    // Para detener:
+    // scanner.stopScan(scanCallback)
+}
+```
+
+### 3\) Intercambio Rápido y Negociación de Wi-Fi Direct
+
+```kotlin
+import android.net.wifi.p2p.WifiP2pManager
+import android.net.wifi.p2p.WifiP2pConfig
+import android.net.wifi.p2p.WifiP2pInfo
+import java.net.ServerSocket
+import java.net.Socket
+// ...
+
+// Obtener info de la conexión (cuando se notifica)
+// En WifiP2pManager.ConnectionInfoListener
+override fun onConnectionInfoAvailable(info: WifiP2pInfo) {
+    if (info.groupFormed) {
+        val PORT = 8888 // Puerto a usar para la comunicación TCP
+
+        if (info.isGroupOwner) {
+            // Soy GO: abrir ServerSocket y esperar conexiones
+            val serverSocket = ServerSocket(PORT)
+            val clientSocket = serverSocket.accept()
+            // Manejar streams para recibir/enviar archivos
+            // ...
+        } else {
+            // Soy cliente: conectar al GO por info.groupOwnerAddress.hostAddress
+            val ip = info.groupOwnerAddress.hostAddress
+            val socket = Socket(ip, PORT)
+            // Enviar/recibir archivos por streams
+            // ...
+        }
+    }
+}
 ```
 
