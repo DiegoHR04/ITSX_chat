@@ -460,3 +460,185 @@ override fun onConnectionInfoAvailable(info: WifiP2pInfo) {
 }
 ```
 
+## 💾 Estructura de Persistencia de Datos (Room Database)
+
+La aplicación utiliza la librería **Room** de Android para persistir el historial de chat, la información de los dispositivos y los metadatos de los archivos transferidos. Esta estructura se basa en cuatro entidades principales, conectadas a través de claves foráneas.
+
+### 1\. Entidades de Datos (`@Entity`)
+
+| Entidad | Descripción | Relación Clave Foránea |
+| :--- | :--- | :--- |
+| **`Dispositivo`** | Almacena la metadata de los dispositivos conocidos (locales y remotos). | N/A |
+| **`Chat`** | Representa una conversación única, vinculada a un `Dispositivo`. | Vincula a `Dispositivo` |
+| **`Mensaje`** | Almacena el contenido del chat. Vincula a un `Chat`. | Vincula a `Chat` |
+| **`Archivo`** | Almacena los metadatos de los archivos adjuntos (transferencia, tamaño, etc.). Vincula a un `Mensaje`. | Vincula a `Mensaje` |
+
+```kotlin
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import androidx.room.ForeignKey
+
+// --- Entidad 1: Dispositivo ---
+@Entity(tableName = "Dispositivo")
+data class Dispositivo(
+    @PrimaryKey(autoGenerate = true)
+    val idDispositivo: Int = 0,
+
+    val uuid: String?,
+    val direccionDispositivo: String?, // MAC o IP de Wi-Fi Direct
+    val nombreDispositivo: String,
+    val esLocal: Boolean, // True para este dispositivo
+    val ultimaConexion: Long
+)
+
+// --- Entidad 2: Chat ---
+@Entity(
+    tableName = "Chat",
+    foreignKeys = [
+        ForeignKey(
+            entity = Dispositivo::class,
+            parentColumns = ["idDispositivo"],
+            childColumns = ["idDispositivo"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class Chat(
+    @PrimaryKey(autoGenerate = true)
+    val idChat: Int = 0,
+
+    val idDispositivo: Int,
+    val idUltimoMensaje: Int?,
+    val fechaCreacion: Long
+)
+
+// --- Entidad 3: Mensaje ---
+@Entity(
+    tableName = "Mensaje",
+    foreignKeys = [
+        ForeignKey(
+            entity = Chat::class,
+            parentColumns = ["idChat"],
+            childColumns = ["idChat"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class Mensaje(
+    @PrimaryKey(autoGenerate = true)
+    val idMensaje: Int = 0,
+
+    val idChat: Int,
+    val uuidRemitente: String,
+    val contenido: String?,
+    val rutaArchivo: String?,
+    val fechaHora: Long,
+    val estado: String // Ej: "ENVIADO", "RECIBIDO", "FALLIDO"
+)
+
+
+// --- Entidad 4: Archivo (Metadata) ---
+@Entity(
+    tableName = "Archivo",
+    foreignKeys = [
+        ForeignKey(
+            entity = Mensaje::class,
+            parentColumns = ["idMensaje"],
+            childColumns = ["idMensaje"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class Archivo(
+    @PrimaryKey(autoGenerate = true)
+    val idArchivo: Int = 0,
+
+    val idMensaje: Int,
+    val nombreArchivo: String,
+    val tamanoArchivo: Long,
+    val rutaArchivo: String,
+    val statusTransferencia: String // Ej: "PENDIENTE", "COMPLETO", "ERROR"
+)
+```
+
+### 2\. Base de Datos Principal (`@Database`)
+
+Define la base de datos de la aplicación, incluyendo todas las entidades y las interfaces Data Access Object (DAO) para interactuar con ellas.
+
+```kotlin
+import androidx.room.Database
+import androidx.room.RoomDatabase
+import androidx.room.*
+
+@Database(
+    entities = [Dispositivo::class, Chat::class, Mensaje::class, Archivo::class],
+    version = 1
+)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun dispositivoDao(): DispositivoDao
+    abstract fun chatDao(): ChatDao
+    abstract fun mensajeDao(): MensajeDao
+    abstract fun archivoDao(): ArchivoDao
+}
+```
+
+### 3\. Data Access Objects (`@Dao`)
+
+Las interfaces DAO definen los métodos para realizar operaciones CRUD (Crear, Leer, Actualizar, Borrar) en la base de datos, implementando las funciones principales necesarias para una aplicación de mensajería.
+
+```kotlin
+@Dao
+interface DispositivoDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertar(dispositivo: Dispositivo): Long
+
+    @Query("SELECT * FROM Dispositivo WHERE esLocal = 1 LIMIT 1")
+    suspend fun obtenerLocal(): Dispositivo?
+
+    @Query("SELECT * FROM Dispositivo WHERE direccionDispositivo = :mac LIMIT 1")
+    suspend fun buscarPorMAC(mac: String): Dispositivo?
+
+    @Query("SELECT * FROM Dispositivo")
+    suspend fun obtenerTodos(): List<Dispositivo>
+}
+
+
+@Dao
+interface ChatDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertar(chat: Chat): Long
+
+    @Query("SELECT * FROM Chat WHERE idDispositivo = :idDispositivo")
+    suspend fun obtenerChatsPorDispositivo(idDispositivo: Int): List<Chat>
+
+    @Query("SELECT * FROM Chat WHERE idChat = :idChat LIMIT 1")
+    suspend fun obtenerPorId(idChat: Int): Chat?
+}
+
+
+@Dao
+interface MensajeDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertar(mensaje: Mensaje): Long
+
+    @Query("SELECT * FROM Mensaje WHERE idChat = :idChat ORDER BY fechaHora ASC")
+    suspend fun obtenerMensajesDeChat(idChat: Int): List<Mensaje>
+
+    @Query("UPDATE Mensaje SET estado = :nuevoEstado WHERE idMensaje = :idMensaje")
+    suspend fun actualizarEstado(idMensaje: Int, nuevoEstado: String)
+}
+
+
+@Dao
+interface ArchivoDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertar(archivo: Archivo): Long
+
+    @Query("SELECT * FROM Archivo WHERE idMensaje = :idMensaje")
+    suspend fun obtenerPorMensaje(idMensaje: Int): Archivo?
+}
+```
+
+-----
+![diagrama](https://github.com/user-attachments/assets/ea13ce10-6d51-4927-8de2-3f49f636aff1)
+
