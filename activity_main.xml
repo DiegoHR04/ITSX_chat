@@ -1,0 +1,21 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:padding="16dp"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <Button android:id="@+id/btnSearch" android:text="Buscar dispositivos"
+        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+    <TextView android:id="@+id/txtStatus"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Estado" android:padding="8dp"/>
+
+    <EditText android:id="@+id/etMessage" android:hint="Escribe mensaje"
+        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+    <Button android:id="@+id/btnSend" android:text="Enviar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+    <TextView android:id="@+id/txtChat"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:text="Mensajes:" android:padding="8dp"/>
+</LinearLayout>
