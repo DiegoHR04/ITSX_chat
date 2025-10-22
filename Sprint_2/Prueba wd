@@ -1,0 +1,63 @@
+AndroidManifest.xml
+Esta parte define los permisos, componentes y acts
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+<uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+<uses-permission android:name="android.permission.INTERNET" />
+
+Dan permisos de ubicacción, estado del wifi e internet para el uso de los sokets (abrir, enviar mensajes).
+<service android:name=".WifiDirectService" android:exported="false" />
+este registra el servicio en segundo plano que gestiona esta funcionalidad
+<activity android:name=".MainActivity">
+    <intent-filter>...</intent-filter>
+</activity>
+Define la pantalla principal (MainActivity) como punto de entrada}
+
+
+WifiDirectService.kt:
+Inicializamos variables(manager y channel, controlan la API Wi-Fi Direct):
+private val manager: WifiP2pManager
+private val channel: WifiP2pManager.Channel
+private val peers = mutableListOf<WifiP2pDevice>()
+
+Inicializamoz el Wi-Fi P2P preparando el broadcast y el servidor
+manager = getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
+channel = manager.initialize(this, mainLooper, null)
+setupReceiver()
+registerReceiver(receiver, IntentFilter()...)
+executor.submit { startServer() }
+
+Despues inicializamos la busqueda de dispositivos con:
+manager.discoverPeers(channel, ...)
+manager.connect(channel, config, ...) //Con este conectamos el dispositivo
+Aqui el BroadcastReceiver debe escuchar eventos del sistema, y lanza un servidor TCP que esperará conexiones.
+
+manager.discoverPeers(channel, ...)
+Inicia la búsqueda de dispositivos cercanos por Wi-Fi Direct.
+Llama a los métodos onSuccess() o onFailure() según el resultado.
+
+
+MainActivity.kt
+Esta clase maneja la interfaz del usuario (UI) y se comunica con el servicio.
+Variables principales
+private lateinit var wifiService: WifiDirectService
+private var bound = false
+enlazan la act con service para poder llamar a sus metodos
+
+ServiceConnection:
+override fun onServiceConnected(...) { wifiService = (binder as ...).getService() } este Conecta la actividad con el servicio cuando inicia.
+
+Brodcast receiver:
+override fun onReceive(context, intent) {
+    when (intent.action) {
+        "STATUS" -> txtStatus.text = msg
+        "MESSAGE_RECEIVED" -> txtChat.append("\n$msg")
+        "PEERS_UPDATED" -> ...
+    }
+}
+Este escucha los mensajes internos enviados desde el service
+Por su parte onCreate configura los botones y permisos, mientras onstart/onstop que inician y terminan el servicio
+
+
+activity_main.xml
+Diseña la interfaz simple.
