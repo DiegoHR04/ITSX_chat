@@ -1,0 +1,18 @@
+# Código de sincronización Bluetooth entre dispositivos de forma directa 📱
+---
+
+## 💡 Descripción General
+Este proyecto implementa una pantalla básica en **Jetpack Compose** para el **escaneo, detección, y simulación de sincronización** directa de dispositivos Bluetooth. Está enfocado en encontrar y gestionar la conexión con otros **teléfonos inteligentes** para una comunicación directa (Peer-to-Peer).
+
+---
+
+## ✨ Funcionalidades Clave
+
+* **Verificación de Bluetooth:** Verifica si el Bluetooth está encendido y, si no lo está, solicita al usuario activarlo o lo dirige a la configuración.
+* **Muestra de Dispositivos Detectados:** Muestra una lista dinámica de todos los dispositivos Bluetooth detectados durante el escaneo.
+* **Mensajes de Estado Claros:** Proporciona mensajes de estado explícitos para la experiencia del usuario:
+    * “🔄 Sincronizando…”
+    * “✅ Conectado correctamente”
+    * “❌ Falló la sincronización”
+* **Limpieza de Estados:** Al detener el escaneo, cancela la búsqueda de dispositivos y limpia el estado de conexión actual.
+* **Compatibilidad con Android 12+ (S):** Manejo de permisos moderno (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`) a través de `ActivityResultContracts`.
