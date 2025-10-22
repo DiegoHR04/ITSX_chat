@@ -1,0 +1,33 @@
+1.- Concepto
+Bluetooth → comunicación punto a punto clásica, cercana (≈10 m).
+  Usará BluetoothAdapter, BluetoothSocket y BluetoothServerSocket.
+Wi-Fi Direct (P2P) → comunicación por red local sin router.
+  Usará WifiP2pManager y WifiP2pManager.Channel.
+
+com.example.app
+├── bluetooth/
+│   ├── BluetoothService.kt
+│   └── BluetoothMessageHandler.kt
+└── wifi/
+    ├── WifiDirectService.kt
+    └── WifiMessageHandler.kt
+
+2.- Servicio Bluetooth
+Permisos en AndroidManifest.xml
+  <uses-permission android:name="android.permission.BLUETOOTH" />
+  <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+  <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+3.- Servicio Wifi-Direct
+Permisos en AndroidManifest.xml
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+  <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+  <uses-permission android:name="android.permission.INTERNET" />
+
+4.- Flujo de funcionamiento
+  Activar Bluetooth y/o Wi-Fi Direct.
+  Emparejar dispositivos (Bluetooth) o descubrir pares (Wi-Fi Direct).
+  Un dispositivo actúa como servidor, otro como cliente.
+  Se intercambian mensajes de texto por sockets.
+
