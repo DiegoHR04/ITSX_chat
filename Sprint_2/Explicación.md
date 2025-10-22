@@ -336,8 +336,3 @@ Este código demuestra una implementación práctica de **escaneo y conexión Bl
 
 ```
 
----
-
-✅ Ya puedes copiarlo completo y pegarlo directamente en tu `Explicación.md` de GitHub.  
-Se verá perfectamente formateado con títulos, listas, bloques de código y secciones claras.
-```
