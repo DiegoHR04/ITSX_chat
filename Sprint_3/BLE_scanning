@@ -1,0 +1,42 @@
+Buscar dispositivos BLE
+
+Para buscar dispositivos BLE, usa el startScan() . Este método toma un ScanCallback como parámetro Debes implementar esta devolución de llamada, 
+porque así se muestran los resultados de los escaneos. Como el escaneo consume mucha batería, debes observar lo siguiente lineamientos:
+
+Deja de escanear tan pronto como encuentres el dispositivo que te interesa.
+Nunca escanees en bucle y siempre establece un límite de tiempo. Un dispositivo que estaba disponible anteriormente puede haber salido del rango y continuar escaneando la batería se agota.
+En el siguiente ejemplo, la app BLE proporciona una actividad (DeviceScanActivity) para buscar dispositivos Bluetooth LE y pantallas disponibles en una lista al usuario. El siguiente fragmento muestra cómo iniciar y detener una analizar:
+
+private val bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
+private var scanning = false
+private val handler = Handler()
+
+// Stops scanning after 10 seconds.
+private val SCAN_PERIOD: Long = 10000
+
+private fun scanLeDevice() {
+    if (!scanning) { // Stops scanning after a pre-defined scan period.
+        handler.postDelayed({
+            scanning = false
+            bluetoothLeScanner.stopScan(leScanCallback)
+        }, SCAN_PERIOD)
+        scanning = true
+        bluetoothLeScanner.startScan(leScanCallback)
+    } else {
+        scanning = false
+        bluetoothLeScanner.stopScan(leScanCallback)
+    }
+}
+
+Para buscar solo tipos de periféricos específicos, puedes llamar startScan(List<ScanFilter>, ScanSettings, ScanCallback): proporcionando una lista de ScanFilter objetos que restringen los dispositivos que busca el análisis y una ScanSettings objeto especifica los parámetros sobre el análisis.
+La siguiente muestra de código es una implementación de ScanCallback: que es la interfaz que se usa para entregar los resultados del análisis BLE. Cuando se encuentran resultados, se agregan a un adaptador de lista en DeviceScanActivity para mostrarla al usuario.
+
+private val leDeviceListAdapter = LeDeviceListAdapter()
+// Device scan callback.
+private val leScanCallback: ScanCallback = object : ScanCallback() {
+    override fun onScanResult(callbackType: Int, result: ScanResult) {
+        super.onScanResult(callbackType, result)
+        leDeviceListAdapter.addDevice(result.device)
+        leDeviceListAdapter.notifyDataSetChanged()
+    }
+}
