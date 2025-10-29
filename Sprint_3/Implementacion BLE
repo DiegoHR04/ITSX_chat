@@ -1,0 +1,102 @@
+Para establecer una conexión punto a punto (P2P) implica usar la API Bluetooth Low Energy (BLE) con dos roles distintos:
+🔹 Peripheral (Anunciante) → publica anuncios BLE (advertising).
+🔹 Central (Scanner) → detecta esos anuncios y establece la conexión.
+Una vez conectados, ambos pueden intercambiar datos mediante el protocolo GATT (Generic Attribute Profile).
+
+Flujo general de una conexión BLE P2P en Android
+🔹 Dispositivo A (Peripheral) inicia advertising y expone servicios BLE.
+🔹 Dispositivo B (Central) hace scanning para descubrir dispositivos BLE cercanos.
+🔹 El Central selecciona el Peripheral y ejecuta connectGatt().
+🔹 Se establece una conexión GATT y ambos pueden leer/escribir características.
+
+Antes de programar:
+Android 5.0 (Lollipop) o superior.
+Permisos:
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+Activar Bluetooth y ubicación en ambos dispositivos.
+
+PARTE 1 — Configurar el Peripheral (Advertising)
+
+    val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+    
+    if (!bluetoothAdapter.isMultipleAdvertisementSupported) {
+        Log.e("BLE", "El dispositivo no soporta BLE Advertising")
+        return
+    }
+    
+    val advertiser = bluetoothAdapter.bluetoothLeAdvertiser
+    
+    val settings = AdvertiseSettings.Builder()
+        .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+        .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+        .setConnectable(true) // Permite conexiones P2P
+        .build()
+    
+    val data = AdvertiseData.Builder()
+        .setIncludeDeviceName(true)
+        .addServiceUuid(ParcelUuid(UUID.fromString("0000180D-0000-1000-8000-00805f9b34fb"))) // Ejemplo: Heart Rate Service
+        .build()
+    
+    val callback = object : AdvertiseCallback() {
+        override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+            Log.i("BLE", "Advertising iniciado correctamente")
+        }
+    
+        override fun onStartFailure(errorCode: Int) {
+            Log.e("BLE", "Error iniciando advertising: $errorCode")
+        }
+    }
+
+    advertiser.startAdvertising(settings, data, callback)
+
+Aquí tu teléfono anuncia que está disponible para conexión BLE, con un servicio identificable mediante UUID.
+
+PARTE 2 — Configurar el Central (Scanner y conexión)
+
+    val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+    val scanner = bluetoothAdapter.bluetoothLeScanner
+    
+    val scanCallback = object : ScanCallback() {
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            Log.i("BLE", "Dispositivo encontrado: ${result.device.name} (${result.device.address})")
+    
+            // Opcional: filtrar por nombre o UUID
+            if (result.device.name == "NombreDelPeripheral") {
+                scanner.stopScan(this)
+                connectToDevice(result.device)
+            }
+        }
+    }
+    
+    scanner.startScan(scanCallback)
+    
+    fun connectToDevice(device: BluetoothDevice) {
+        device.connectGatt(context, false, object : BluetoothGattCallback() {
+            override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    Log.i("BLE", "Conectado al dispositivo: ${device.name}")
+                    gatt.discoverServices()
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    Log.i("BLE", "Desconectado de ${device.name}")
+                }
+            }
+    
+            override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    Log.i("BLE", "Servicios descubiertos: ${gatt.services}")
+                }
+            }
+        })
+    }
+
+Cómo funciona internamente
+
+🔹 El Peripheral publica un paquete de advertising BLE con su nombre y UUID.
+🔹 El Central escanea esos anuncios (paquetes BLE que se transmiten cada 100–1000 ms).
+🔹 Al encontrar el dispositivo, el Central ejecuta connectGatt(), que abre un canal P2P BLE.
+🔹 Una vez conectados, ambos pueden leer/escribir características GATT.
