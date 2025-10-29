@@ -64,3 +64,6 @@ UNIQUE (id_chat, id_dispositivo);
 -- Validación de estados permitidos
 CHECK (estado IN ('enviando', 'enviado', 'recibido', 'leido'));
 CHECK (estadoTransferencia IN ('pendiente', 'enviando', 'completo', 'fallido'));
+```
+## Diagrama relacional de la base de datos
+<img width="750" height="531" alt="bd_proyecto" src="https://github.com/user-attachments/assets/0d34f68f-a24e-4ad4-90e7-f87662528473" />
