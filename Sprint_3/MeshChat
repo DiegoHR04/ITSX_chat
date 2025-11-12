@@ -1,7 +1,17 @@
-Programa MeshChat V1
+# 💬 Programa MeshChat V1
+Aplicación Android para comunicación **Wi-Fi Direct (P2P)** sin necesidad de Internet.  
+Cada usuario puede descubrir, conectar y chatear con otros dispositivos cercanos.
 
----- MainActivity.kt ----
-'''java
+---
+
+## 🧠 Descripción general
+Este proyecto crea una conexión **peer-to-peer (Wi-Fi Direct)** entre dispositivos Android para enviar y recibir mensajes en tiempo real.  
+Usa `WifiP2pManager`, `Socket` y `Compose` para la interfaz.
+
+---
+
+## ⚙️ Archivo principal: `MainActivity.kt`
+```kotlin
 package com.example.chatdirect
 
 import android.Manifest
@@ -27,36 +37,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedButton
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -87,14 +76,14 @@ class MainActivity : ComponentActivity(), WifiP2pManager.ConnectionInfoListener 
 
     private val peerListListener = WifiP2pManager.PeerListListener { peerList ->
         val refreshedPeers = peerList.deviceList.toList()
-        Log.d("MainActivity", "PeerListListener found ${refreshedPeers.size} peers (not used for app list).")
+        Log.d("MainActivity", "PeerListListener found ${refreshedPeers.size} peers.")
     }
 
     private val serviceListener = WifiP2pManager.DnsSdServiceResponseListener { instanceName, _, srcDevice ->
         if (instanceName.equals(SERVICE_INSTANCE, ignoreCase = true)) {
             if (peers.none { it.deviceAddress == srcDevice.deviceAddress }) {
                 peers = peers + srcDevice
-                Log.d("MainActivity", "ChatDirect service discovered on device: ${srcDevice.deviceName}")
+                Log.d("MainActivity", "ChatDirect service discovered: ${srcDevice.deviceName}")
             }
         }
     }
@@ -140,7 +129,7 @@ class MainActivity : ComponentActivity(), WifiP2pManager.ConnectionInfoListener 
                                 title = { Text("Chat Activo") },
                                 navigationIcon = {
                                     IconButton(onClick = { disconnect() }) {
-                                        Icon(Icons.Default.ArrowBack, contentDescription = "Desconectar y volver")
+                                        Icon(Icons.Default.ArrowBack, contentDescription = "Desconectar")
                                     }
                                 }
                             )
@@ -168,223 +157,8 @@ class MainActivity : ComponentActivity(), WifiP2pManager.ConnectionInfoListener 
         }
     }
 
-    fun onConnectionStateChange(connected: Boolean) {
-        isConnected = connected
-        if (!connected) {
-            messages = emptyList()
-        }
-    }
-    
-    private fun disconnect() {
-        sendReceive?.closeSocket()
-        sendReceive = null
-        manager.removeGroup(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-                Log.d("MainActivity", "Disconnected successfully.")
-            }
-
-            override fun onFailure(reason: Int) {
-                Log.e("MainActivity", "Failed to disconnect. Reason: $reason")
-            }
-        })
-    }
-
-    private fun sendMessage() {
-        if (currentMessage.isNotBlank()) {
-            val executor = Executors.newSingleThreadExecutor()
-            executor.execute {
-                sendReceive?.write(currentMessage.toByteArray())
-                handler.post {
-                    messages = messages + "Yo: $currentMessage"
-                    currentMessage = ""
-                }
-            }
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun startLocalServiceRegistration() {
-        val record: Map<String, String> = mapOf(
-            "listenport" to "8888",
-            "devicename" to "ChatDirectDevice"
-        )
-        val serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(SERVICE_INSTANCE, SERVICE_TYPE, record)
-
-        manager.addLocalService(channel, serviceInfo, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-                Log.d("MainActivity", "Local service registered successfully.")
-            }
-            override fun onFailure(reason: Int) {
-                Log.e("MainActivity", "Failed to register local service. Reason: $reason")
-            }
-        })
-    }
-
-    override fun onResume() {
-        super.onResume()
-        registerReceiver(receiver, intentFilter)
-        startLocalServiceRegistration()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        unregisterReceiver(receiver)
-        manager.clearLocalServices(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-                Log.d("MainActivity", "Local services cleared.")
-            }
-            override fun onFailure(reason: Int) {
-                Log.e("MainActivity", "Failed to clear local services. Reason: $reason")
-            }
-        })
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun discoverServices() {
-        val permissionsToRequest = mutableListOf<String>()
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(Manifest.permission.NEARBY_WIFI_DEVICES)
-            }
-        }
-
-        if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 1)
-            Log.d("MainActivity", "Permissions not granted, requesting.")
-            return
-        }
-        
-        peers = emptyList()
-        val serviceRequest = WifiP2pDnsSdServiceRequest.newInstance()
-        manager.addServiceRequest(channel, serviceRequest, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-                Log.d("MainActivity", "Service request added.")
-                manager.discoverServices(channel, object : WifiP2pManager.ActionListener {
-                    override fun onSuccess() {
-                        Log.d("MainActivity", "Service discovery initiated.")
-                    }
-                    override fun onFailure(reason: Int) {
-                        Log.e("MainActivity", "Service discovery failed. Reason: $reason")
-                    }
-                })
-            }
-            override fun onFailure(reason: Int) {
-                Log.e("MainActivity", "Failed to add service request. Reason: $reason")
-            }
-        })
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun connect(device: WifiP2pDevice) {
-        val config = WifiP2pConfig().apply {
-            deviceAddress = device.deviceAddress
-        }
-        manager.connect(channel, config, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-                Log.d("MainActivity", "Connection to ${device.deviceName} initiated successfully.")
-            }
-
-            override fun onFailure(reason: Int) {
-                Log.e("MainActivity", "Connection to ${device.deviceName} failed. Reason: $reason")
-            }
-        })
-    }
-
-    override fun onConnectionInfoAvailable(info: WifiP2pInfo) {
-        val groupOwnerAddress: InetAddress? = info.groupOwnerAddress
-
-        if (info.groupFormed && info.isGroupOwner && groupOwnerAddress != null) {
-            Log.d("MainActivity", "I am the group owner (server)")
-            ServerClass().start()
-            handler.post { isConnected = true }
-        } else if (info.groupFormed && groupOwnerAddress != null) {
-            Log.d("MainActivity", "I am a client")
-            ClientClass(groupOwnerAddress).start()
-            handler.post { isConnected = true }
-        } else {
-             Log.d("MainActivity", "Connection lost or failed.")
-             onConnectionStateChange(false)
-        }
-    }
-    
-    companion object {
-        const val MESSAGE_READ = 1
-        private const val SERVICE_INSTANCE = "_chatdirect"
-        private const val SERVICE_TYPE = "_presence._tcp"
-    }
-    
-    inner class ServerClass : Thread() {
-        override fun run() {
-            try {
-                val serverSocket = ServerSocket(8888)
-                val socket = serverSocket.accept()
-                sendReceive = SendReceive(socket)
-                sendReceive?.start()
-            } catch (e: IOException) {
-                e.printStackTrace()
-                Log.e("MainActivity", "ServerClass IOException: ${e.message}")
-            }
-        }
-    }
-
-    inner class ClientClass(private val hostAddress: InetAddress) : Thread() {
-        override fun run() {
-            try {
-                val socket = Socket()
-                socket.connect(java.net.InetSocketAddress(hostAddress, 8888), 500)
-                sendReceive = SendReceive(socket)
-                sendReceive?.start()
-            } catch (e: IOException) {
-                e.printStackTrace()
-                Log.e("MainActivity", "ClientClass IOException: ${e.message}")
-            }
-        }
-    }
-
-    inner class SendReceive(private val socket: Socket) : Thread() {
-        private val inputStream: InputStream = socket.inputStream
-        private val outputStream: OutputStream = socket.outputStream
-
-        override fun run() {
-            val buffer = ByteArray(1024)
-            var bytes: Int
-
-            while (socket.isConnected) {
-                try {
-                    bytes = inputStream.read(buffer)
-                    if (bytes > 0) {
-                        handler.obtainMessage(MESSAGE_READ, bytes, -1, buffer).sendToTarget()
-                    }
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                    Log.e("MainActivity", "SendReceive Exception: ${e.message}")
-                    break
-                }
-            }
-        }
-
-        fun write(bytes: ByteArray) {
-            try {
-                outputStream.write(bytes)
-            } catch (e: IOException) {
-                e.printStackTrace()
-                Log.e("MainActivity", "SendReceive write Exception: ${e.message}")
-            }
-        }
-
-        fun closeSocket() {
-            try {
-                socket.close()
-            } catch (e: IOException) {
-                Log.e("MainActivity", "Error closing socket", e)
-            }
-        }
-    }
-}
-
+## 📡 Archivo principal: `MainActivity.kt`
+```kotlin
 class WiFiDirectBroadcastReceiver(
     private val manager: WifiP2pManager,
     private val channel: WifiP2pManager.Channel,
@@ -398,39 +172,33 @@ class WiFiDirectBroadcastReceiver(
         when (intent.action) {
             WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
                 val state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
-                 if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                    Log.d("WiFiDirectBroadcastReceiver", "Wi-Fi P2P is enabled.")
+                if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
+                    Log.d("WiFiDirectBroadcastReceiver", "Wi-Fi P2P habilitado.")
                 } else {
-                    Log.e("WiFiDirectBroadcastReceiver", "Wi-Fi P2P is not enabled. Please enable it in system settings.")
+                    Log.e("WiFiDirectBroadcastReceiver", "Wi-Fi P2P deshabilitado.")
                 }
             }
             WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
-                 if (ActivityCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                     Log.e("WiFiDirectBroadcastReceiver", "Permission check failed for requestPeers")
-                    return
-                }
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) return
                 manager.requestPeers(channel, peerListListener)
             }
             WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
                 val networkInfo = intent.getParcelableExtra<NetworkInfo>(WifiP2pManager.EXTRA_NETWORK_INFO)
                 if (networkInfo?.isConnected == true) {
                     manager.requestConnectionInfo(channel, connectionInfoListener)
-                    Log.d("WiFiDirectBroadcastReceiver", "Device connected")
+                    Log.d("WiFiDirectBroadcastReceiver", "Dispositivo conectado")
                 } else {
-                     (activity as MainActivity).onConnectionStateChange(false)
-                    Log.d("WiFiDirectBroadcastReceiver", "Device disconnected")
+                    (activity as MainActivity).onConnectionStateChange(false)
+                    Log.d("WiFiDirectBroadcastReceiver", "Dispositivo desconectado")
                 }
             }
-            WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {}
         }
     }
 }
 
-
+### 💬 Interfaz: Pantalla de Descubrimiento
+```kotlin
 @Composable
 fun DeviceDiscoveryScreen(
     modifier: Modifier = Modifier,
@@ -439,15 +207,10 @@ fun DeviceDiscoveryScreen(
     onPeerClick: (WifiP2pDevice) -> Unit
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        ElevatedButton(
-            onClick = onDiscoverClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        ElevatedButton(onClick = onDiscoverClick, modifier = Modifier.fillMaxWidth()) {
             Text("Buscar usuarios de ChatDirect")
         }
 
@@ -460,36 +223,24 @@ fun DeviceDiscoveryScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("No se encontraron usuarios de ChatDirect.")
-                Text("Toca el botón para iniciar la búsqueda.")
+                Text("Presiona el botón para iniciar la búsqueda.")
             }
         } else {
-             Text(
-                "Usuarios de ChatDirect Encontrados",
+            Text(
+                "Usuarios encontrados:",
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier
-                    .padding(bottom = 8.dp)
-                    .align(Alignment.Start)
+                modifier = Modifier.padding(bottom = 8.dp).align(Alignment.Start)
             )
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(peers) { peer ->
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPeerClick(peer) },
+                        modifier = Modifier.fillMaxWidth().clickable { onPeerClick(peer) },
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         ListItem(
                             headlineContent = { Text(peer.deviceName ?: "Dispositivo sin nombre") },
                             supportingContent = { Text(peer.deviceAddress) },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "Icono de dispositivo"
-                                )
-                            }
+                            leadingContent = { Icon(Icons.Default.Person, contentDescription = null) }
                         )
                     }
                 }
@@ -498,6 +249,8 @@ fun DeviceDiscoveryScreen(
     }
 }
 
+### 💬 Interfaz: Pantalla de Chat
+```kotlin
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
@@ -506,21 +259,13 @@ fun ChatScreen(
     onCurrentMessageChange: (String) -> Unit,
     onSendMessage: () -> Unit
 ) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)
-    ) {
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(messages) { message ->
-                Text(message, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(vertical = 4.dp))
+                Text(message, style = MaterialTheme.typography.bodyLarge)
             }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             TextField(
                 value = currentMessage,
                 onValueChange = onCurrentMessageChange,
@@ -528,13 +273,14 @@ fun ChatScreen(
                 placeholder = { Text("Escribe un mensaje...") }
             )
             IconButton(onClick = onSendMessage, enabled = currentMessage.isNotBlank()) {
-                Icon(Icons.Default.Send, contentDescription = "Enviar mensaje")
+                Icon(Icons.Default.Send, contentDescription = "Enviar")
             }
         }
     }
 }
 
-
+### 🧩 Vista previa de interfaces
+ ```kotlin
 @Preview(showBackground = true)
 @Composable
 fun DeviceDiscoveryScreenPreview() {
@@ -552,12 +298,10 @@ fun DeviceDiscoveryScreenPreview() {
 fun ChatScreenPreview() {
     ChatdirectTheme {
         ChatScreen(
-            messages = listOf("Yo: Hola!", "Amigo: ¡Hola! ¿Qué tal?"),
+            messages = listOf("Yo: Hola!", "Amigo: ¡Qué tal!"),
             currentMessage = "Escribiendo...",
             onCurrentMessageChange = {},
             onSendMessage = {}
         )
     }
 }
-'''
-
