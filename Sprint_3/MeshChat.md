@@ -157,7 +157,9 @@ class MainActivity : ComponentActivity(), WifiP2pManager.ConnectionInfoListener 
         }
     }
 }
-
+```
+### 📡 Clase: WiFiDirectBroadcastReceiver
+```kotlin
 class WiFiDirectBroadcastReceiver(
     private val manager: WifiP2pManager,
     private val channel: WifiP2pManager.Channel,
@@ -195,7 +197,9 @@ class WiFiDirectBroadcastReceiver(
         }
     }
 }
-
+```
+### 💬 Interfaz: Pantalla de Descubrimiento
+```kotlin
 @Composable
 fun DeviceDiscoveryScreen(
     modifier: Modifier = Modifier,
@@ -245,7 +249,9 @@ fun DeviceDiscoveryScreen(
         }
     }
 }
-
+```
+### 💬 Interfaz: Pantalla de Chat
+```kotlin
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
@@ -273,7 +279,9 @@ fun ChatScreen(
         }
     }
 }
-
+```
+### 🧩 Vista previa de interfaces
+```kotlin
 @Preview(showBackground = true)
 @Composable
 fun DeviceDiscoveryScreenPreview() {
